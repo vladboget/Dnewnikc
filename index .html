@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Электронный дневник — Школа</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    background: #fff;
+    width: 100%;
+    max-width: 700px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  .header {
+    background: #1e3c72;
+    color: #fff;
+    padding: 24px;
+    text-align: center;
+  }
+  .header h1 { font-size: 24px; margin-bottom: 6px; }
+  .header p { font-size: 14px; opacity: 0.85; }
+  .content { padding: 28px; }
+  .class-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 10px;
+    border-radius: 10px;
+    background: #f4f6fb;
+    transition: background 0.2s;
+  }
+  .class-row.filled { background: #e3f5e8; }
+  .class-label {
+    font-weight: 600;
+    color: #1e3c72;
+    min-width: 70px;
+    font-size: 15px;
+  }
+  .class-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #ccd4e6;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .class-row input:focus { border-color: #2a5298; }
+  .class-row.filled input { border-color: #28a745; }
+  .progress {
+    height: 8px;
+    background: #e0e6f0;
+    border-radius: 4px;
+    margin: 20px 0;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #4cd964);
+    width: 0%;
+    transition: width 0.3s;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    background: #1e3c72;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  button:hover:not(:disabled) { background: #2a5298; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Вторая страница */
+  .teachers-page { display: none; }
+  .teachers-page.active { display: block; }
+  .first-page.hidden { display: none; }
+  .teacher-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #f4f6fb;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid #1e3c72;
+  }
+  .teacher-item .cls { font-weight: 600; color: #1e3c72; }
+  .teacher-item .fio { color: #333; }
+  .success-msg {
+    text-align: center;
+    padding: 16px;
+    background: #e3f5e8;
+    color: #1e7a34;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .back-btn {
+    background: #6c757d;
+    margin-top: 12px;
+  }
+  .back-btn:hover { background: #5a6268; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📚 Электронный дневник</h1>
+    <p>Заполните классных руководителей</p>
+  </div>
+
+  <div class="content">
+    <!-- ПЕРВАЯ СТРАНИЦА -->
+    <div class="first-page" id="firstPage">
+      <div id="classList"></div>
+      <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+      <button id="submitBtn" disabled>Перейти к списку учителей</button>
+    </div>
+
+    <!-- ВТОРАЯ СТРАНИЦА -->
+    <div class="teachers-page" id="teachersPage">
+      <div class="success-msg">✅ Все классы заполнены!</div>
+      <div id="teachersList"></div>
+      <button class="back-btn" onclick="goBack()">← Вернуться назад</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Список классов
+  const classes = ['5А', '5Б', '6А', '6Б', '7А', '7Б', '8А', '8Б', '9А', '10А', '11А'];
+
+  const classListEl = document.getElementById('classList');
+  const submitBtn = document.getElementById('submitBtn');
+  const progressBar = document.getElementById('progressBar');
+  const firstPage = document.getElementById('firstPage');
+  const teachersPage = document.getElementById('teachersPage');
+  const teachersList = document.getElementById('teachersList');
+
+  // Хранилище значений
+  const values = {};
+
+  // Генерация полей
+  classes.forEach(cls => {
+    const row = document.createElement('div');
+    row.className = 'class-row';
+    row.id = 'row-' + cls;
+
+    const label = document.createElement('div');
+    label.className = 'class-label';
+    label.textContent = cls;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'ФИО учителя...';
+    input.dataset.cls = cls;
+    input.addEventListener('input', onInput);
+
+    row.appendChild(label);
+    row.appendChild(input);
+    classListEl.appendChild(row);
+  });
+
+  function onInput(e) {
+    const cls = e.target.dataset.cls;
+    const val = e.target.value.trim();
+    values[cls] = val;
+
+    const row = document.getElementById('row-' + cls);
+    if (val) row.classList.add('filled');
+    else row.classList.remove('filled');
+
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const total = classes.length;
+    const filled = classes.filter(c => values[c] && values[c].length > 0).length;
+    const percent = (filled / total) * 100;
+    progressBar.style.width = percent + '%';
+    submitBtn.disabled = filled !== total;
+    submitBtn.textContent = filled === total
+      ? 'Перейти к списку учителей'
+      : `Заполнено ${filled} из ${total}`;
+  }
+
+  submitBtn.addEventListener('click', () => {
+    // Формируем список учителей
+    teachersList.innerHTML = '';
+    classes.forEach(cls => {
+      const item = document.createElement('div');
+      item.className = 'teacher-item';
+      item.innerHTML = `<span class="cls">${cls}</span><span class="fio">${values[cls]}</span>`;
+      teachersList.appendChild(item);
+    });
+
+    firstPage.classList.add('hidden');
+    teachersPage.classList.add('active');
+  });
+
+  function goBack() {
+    teachersPage.classList.remove('active');
+    firstPage.classList.remove('hidden');
+  }
+
+  updateProgress();
+</script>
+</body>
+</html>
